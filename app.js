@@ -1,6 +1,5 @@
 'use strict';
 
-var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 var wavesurfer, context, processor;
 let fftw_plan_dft_r2c_1d;
 let fftw_execute;
@@ -53,19 +52,14 @@ function doFFT(doubles, freq) {
 }
 
 
+
+
 // Init & load
 document.addEventListener('DOMContentLoaded', function() {
 
-      if (isSafari) {
-        // Safari 11 or newer automatically suspends new AudioContext's that aren't
-        // created in response to a user-gesture, like a click or tap, so create one
-        // here (inc. the script processor)
-        var AudioContext =
-          window.AudioContext || window.webkitAudioContext;
-        context = new AudioContext();
-        processor = context.createScriptProcessor(1024, 1, 1);
-      }
 
+      context = new window.AudioContext();
+      processor = context.createScriptProcessor(1024, 1, 1);
       // Init wavesurfer
       wavesurfer = WaveSurfer.create({
         container: '#waveform',
@@ -87,32 +81,50 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       wavesurfer.microphone.start();
 
+  loadFFT(() => {
+    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      .then(handleSuccess);
+  });
+});
 
-    let threshold = 0.00002;
-    function cleanNoise(data) {
-      var i = data[0].length;
-      while (i--) {
-        if (data[1][i] < threshold) {
-          data[0].splice(i, 1);
-          data[1].splice(i, 1);
-        }
-      }
+
+var handleSuccess = function(stream) {
+  var source = context.createMediaStreamSource(stream);
+  var processor = context.createScriptProcessor(1024, 1, 1);
+
+  source.connect(processor);
+  processor.connect(context.destination);
+  processor.onaudioprocess = function(e) {
+    if (e.inputBuffer.getChannelData(0).length) {
+      drawFFTGraph(e.inputBuffer.getChannelData(0), 48000)
     }
+  };
+};
 
-    function addMax(data) {
-      data[0].unshift(0);
-      data[1].unshift(0.3);
+let threshold = 0.00002;
+function cleanNoise(data) {
+  var i = data[0].length;
+  while (i--) {
+    if (data[1][i] < threshold) {
+      data[0].splice(i, 1);
+      data[1].splice(i, 1);
     }
-
-  function drawFFTGraph(audioBuffer, freq) {
-    let data = doFFT(audioBuffer, freq);
-    //cleanNoise(data);
-    //addMax(data);
-    var dom = document.getElementById("container");
-    var myChart = echarts.init(dom);
-    myChart.setOption(getGraphOptions(data), true);
+  }
 }
 
+function addMax(data) {
+  data[0].unshift(0);
+  data[1].unshift(0.3);
+}
+
+function drawFFTGraph(audioBuffer, freq) {
+  let data = doFFT(audioBuffer, freq);
+  //cleanNoise(data);
+  //addMax(data);
+  var dom = document.getElementById("container");
+  var myChart = echarts.init(dom);
+  myChart.setOption(getGraphOptions(data), true);
+}
 
 function getGraphOptions(data) {
   return {
@@ -138,25 +150,3 @@ function getGraphOptions(data) {
       }],
   };
 }
-
-
-  var handleSuccess = function(stream) {
-    var context = new window.AudioContext();
-    var source = context.createMediaStreamSource(stream);
-    var processor = context.createScriptProcessor(1024, 1, 1);
-
-    source.connect(processor);
-    processor.connect(context.destination);
-      processor.onaudioprocess = function(e) {
-        if (e.inputBuffer.getChannelData(0).length) {
-          drawFFTGraph(e.inputBuffer.getChannelData(0), 48000)
-        }
-      };
-  };
-
-  loadFFT(() => {
-    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-      .then(handleSuccess);
-  });
-
-});
