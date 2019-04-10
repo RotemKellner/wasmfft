@@ -52,8 +52,15 @@ function doFFT(doubles, freq) {
 }
 
 
-function playVid() {
-  context = new window.AudioContext();
+loadFFT(() => {
+  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    .then(handleSuccess);
+});
+
+
+var handleSuccess = function(stream) {
+  let ctx = window.AudioContext || window.webkitAudioContext;
+  context = new ctx();
   processor = context.createScriptProcessor(1024, 1, 1);
   // Init wavesurfer
   wavesurfer = WaveSurfer.create({
@@ -76,16 +83,7 @@ function playVid() {
   });
   wavesurfer.microphone.start();
 
-  loadFFT(() => {
-    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-      .then(handleSuccess);
-  });
-}
 
-
-
-
-var handleSuccess = function(stream) {
   var source = context.createMediaStreamSource(stream);
   var processor = context.createScriptProcessor(1024, 1, 1);
 
