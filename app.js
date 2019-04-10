@@ -52,40 +52,37 @@ function doFFT(doubles, freq) {
 }
 
 
+function playVid() {
+  context = new window.AudioContext();
+  processor = context.createScriptProcessor(1024, 1, 1);
+  // Init wavesurfer
+  wavesurfer = WaveSurfer.create({
+    container: '#waveform',
+    waveColor: '#0000ff',
+    interact: false,
+    cursorWidth: 0,
+    audioContext: context || null,
+    audioScriptProcessor: processor || null,
+    plugins: [WaveSurfer.microphone.create()]
+  });
 
 
-// Init & load
-document.addEventListener('DOMContentLoaded', function() {
+  wavesurfer.microphone.on('deviceReady', function() {
+    console.info('Device ready!');
 
-
-      context = new window.AudioContext();
-      processor = context.createScriptProcessor(1024, 1, 1);
-      // Init wavesurfer
-      wavesurfer = WaveSurfer.create({
-        container: '#waveform',
-        waveColor: '#0000ff',
-        interact: false,
-        cursorWidth: 0,
-        audioContext: context || null,
-        audioScriptProcessor: processor || null,
-        plugins: [WaveSurfer.microphone.create()]
-      });
-
-
-      wavesurfer.microphone.on('deviceReady', function() {
-        console.info('Device ready!');
-
-      });
-      wavesurfer.microphone.on('deviceError', function(code) {
-        console.warn('Device error: ' + code);
-      });
-      wavesurfer.microphone.start();
+  });
+  wavesurfer.microphone.on('deviceError', function(code) {
+    console.warn('Device error: ' + code);
+  });
+  wavesurfer.microphone.start();
 
   loadFFT(() => {
     navigator.mediaDevices.getUserMedia({ audio: true, video: false })
       .then(handleSuccess);
   });
-});
+}
+
+
 
 
 var handleSuccess = function(stream) {
